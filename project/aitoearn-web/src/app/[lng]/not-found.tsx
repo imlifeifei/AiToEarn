@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { useGetClientLng } from '@/hooks/useSystem'
 
 export default function NotFound() {
+  const lng = useGetClientLng()
   return (
     <div
       style={{
@@ -17,7 +19,7 @@ export default function NotFound() {
     >
       <span style={{ fontSize: '60px', color: 'var(--theColor5)' }}>404</span>
       <Link
-        href="/"
+        href={`/${lng}`}
         style={{
           marginTop: '20px',
           color: 'var(--theColor5)',

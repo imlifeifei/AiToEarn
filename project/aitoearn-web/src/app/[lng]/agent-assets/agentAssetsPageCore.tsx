@@ -21,6 +21,7 @@ import { useTransClient } from '@/app/i18n/client'
 import { MediaPreview } from '@/components/common/MediaPreview'
 import { Button } from '@/components/ui/button'
 import { useDocumentTitle } from '@/hooks'
+import { useGetClientLng } from '@/hooks/useSystem'
 import { getAssetMediaType } from '@/utils/agent/asset'
 import { getOssUrl } from '@/utils/oss'
 import { AgentAssetCard } from './components/AgentAssetCard'
@@ -45,6 +46,7 @@ const MASONRY_BREAKPOINTS = {
 
 export function AgentAssetsPageCore() {
   const { t } = useTransClient('material')
+  const lng = useGetClientLng()
 
   // 动态更新页面标题
   useDocumentTitle(t('agentAssets.title'))
@@ -177,7 +179,7 @@ export function AgentAssetsPageCore() {
                 {t('agentAssets.noAssetsDesc')}
               </p>
               <Button asChild className="cursor-pointer">
-                <Link href="/chat">{t('agentAssets.goToChat')}</Link>
+                <Link href={`/${lng}/ai-social`}>{t('agentAssets.goToChat')}</Link>
               </Button>
             </div>
           ) : (

@@ -13,6 +13,7 @@ import { useEffect } from 'react'
 
 import { useTransClient } from '@/app/i18n/client'
 import logo from '@/assets/images/logo.png'
+import { useGetClientLng } from '@/hooks/useSystem'
 import { useUserStore } from '@/store/user'
 
 import { EmailLoginForm } from './EmailLoginForm'
@@ -25,15 +26,16 @@ const fadeInUp = {
 
 export default function LoginContent() {
   const router = useRouter()
+  const lng = useGetClientLng()
   const { token, _hasHydrated } = useUserStore()
   const { t } = useTransClient('login')
 
   // 已登录用户重定向
   useEffect(() => {
     if (_hasHydrated && token) {
-      router.replace('/')
+      router.replace(`/${lng}`)
     }
-  }, [_hasHydrated, token, router])
+  }, [_hasHydrated, token, router, lng])
 
   // 在 hydration 完成前或已登录时显示空白（避免闪烁）
   if (!_hasHydrated || token) {
@@ -54,7 +56,7 @@ export default function LoginContent() {
       {/* 左上角 Logo */}
       <div className="absolute left-6 top-6 z-20">
         <Link
-          href="/"
+          href={`/${lng}`}
           className="flex items-center gap-2 text-foreground no-underline hover:opacity-80 transition-opacity"
         >
           <Image src={logo} alt="AiToEarn" width={28} height={28} />
@@ -74,7 +76,7 @@ export default function LoginContent() {
           {/* 中心 Logo */}
           <div className="mb-8 flex flex-col items-center">
             <Link
-              href="/"
+              href={`/${lng}`}
               className="mb-6 flex h-20 w-20 items-center justify-center hover:opacity-80 transition-opacity"
             >
               <Image

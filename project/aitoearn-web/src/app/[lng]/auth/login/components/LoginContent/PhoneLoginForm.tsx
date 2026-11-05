@@ -15,6 +15,7 @@ import { phoneCodeLoginApi, sendPhoneCodeApi } from '@/api/auth/auth.api'
 import { useTransClient } from '@/app/i18n/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useGetClientLng } from '@/hooks/useSystem'
 import { useUserStore } from '@/store/user'
 import { toast } from '@/utils/ui/toast'
 
@@ -36,6 +37,7 @@ interface PhoneLoginFormData {
 
 export function PhoneLoginForm({ onLoginSuccess, redirectUrl, inviteCode: _inviteCodeProp }: PhoneLoginFormProps = {}) {
   const router = useRouter()
+  const lng = useGetClientLng()
   const searchParams = useSearchParams()
   const redirect = redirectUrl ?? searchParams.get('redirect')
   const { setToken, setUserInfo } = useUserStore()
@@ -103,7 +105,7 @@ export function PhoneLoginForm({ onLoginSuccess, redirectUrl, inviteCode: _invit
           onLoginSuccess()
         }
         else {
-          router.push(redirect || '/')
+          router.push(!redirect || redirect === '/' ? `/${lng}` : redirect)
         }
       }
       else {

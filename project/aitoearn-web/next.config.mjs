@@ -27,6 +27,9 @@ const nextConfig = {
   },
   reactStrictMode: false,
   experimental: {
+    // Constrain native production builds on memory-limited hosts.
+    cpus: 1,
+    webpackBuildWorker: true,
     forceSwcTransforms: true,
     outputFileTracingRoot: undefined,
   },

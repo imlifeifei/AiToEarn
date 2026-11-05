@@ -15,6 +15,7 @@ import { ChatMessage } from '@/components/Chat/ChatMessage'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDocumentTitle } from '@/hooks'
+import { useGetClientLng } from '@/hooks/useSystem'
 import { convertMessages } from './[taskId]/utils'
 
 /** 分享页面加载骨架屏 */
@@ -83,6 +84,7 @@ function SharedChatError({ type, onBack }: { type: 'notFound' | 'expired', onBac
 
 export default function SharedChatPage() {
   const { t } = useTransClient('share')
+  const lng = useGetClientLng()
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
@@ -153,8 +155,8 @@ export default function SharedChatPage() {
 
   // 返回首页
   const handleBack = useCallback(() => {
-    router.push('/')
-  }, [router])
+    router.push(`/${lng}`)
+  }, [router, lng])
 
   // 转换消息格式
   const displayMessages = taskDetail?.messages ? convertMessages(taskDetail.messages) : []

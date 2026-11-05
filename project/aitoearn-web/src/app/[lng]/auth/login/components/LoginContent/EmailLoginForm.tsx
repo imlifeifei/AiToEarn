@@ -134,7 +134,7 @@ export function EmailLoginForm({
           onLoginSuccess()
         }
         else {
-          router.push(redirect || '/')
+          router.push(!redirect || redirect === '/' ? `/${lng}` : redirect)
         }
       }
       else {
@@ -168,7 +168,7 @@ export function EmailLoginForm({
           onLoginSuccess()
         }
         else {
-          router.push(redirect || '/')
+          router.push(!redirect || redirect === '/' ? `/${lng}` : redirect)
         }
       }
       else {

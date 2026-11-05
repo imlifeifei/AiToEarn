@@ -17,6 +17,7 @@ import logo from '@/assets/images/logo.png'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useGetClientLng } from '@/hooks/useSystem'
 import { cn } from '@/utils/className'
 import { useLoginDialogStore } from '@/store/login-dialog'
 
@@ -33,6 +34,7 @@ export default function LoginDialog() {
 
 const LoginDialogContent = memo(() => {
   const router = useRouter()
+  const lng = useGetClientLng()
   const { t } = useTransClient('login')
   const isMobile = useIsMobile()
   const { redirectUrl, inviteCode, fromGuard, closeLoginDialog } = useLoginDialogStore(
@@ -48,10 +50,10 @@ const LoginDialogContent = memo(() => {
     if (!open) {
       closeLoginDialog()
       if (fromGuard) {
-        router.push('/')
+        router.push(`/${lng}`)
       }
     }
-  }, [closeLoginDialog, fromGuard, router])
+  }, [closeLoginDialog, fromGuard, router, lng])
 
   const handleLoginSuccess = useCallback(() => {
     closeLoginDialog()
@@ -59,9 +61,9 @@ const LoginDialogContent = memo(() => {
       window.location.reload()
     }
     else if (redirectUrl) {
-      router.push(redirectUrl)
+      router.push(redirectUrl === '/' ? `/${lng}` : redirectUrl)
     }
-  }, [closeLoginDialog, fromGuard, redirectUrl, router])
+  }, [closeLoginDialog, fromGuard, redirectUrl, router, lng])
 
   return (
     <Dialog open onOpenChange={handleOpenChange}>

@@ -14,7 +14,6 @@ import { ChatInput } from '@/components/Chat/ChatInput'
 import { PlatformIcon } from '@/components/common/PlatformIcon'
 import { useMediaUpload } from '@/hooks/useMediaUpload'
 import { usePlatformInfoList } from '@/hooks/usePlatformMetadata'
-import { useAccountStore } from '@/store/account'
 import { useAgentStore } from '@/store/agent'
 import { useUserStore } from '@/store/user'
 
@@ -242,7 +241,7 @@ export const HomeChat = forwardRef<IHomeChatRef, IHomeChatProps>(
       })
 
       // 立即跳转到聊天页面（使用 "new" 作为临时 taskId）
-      router.push(`/chat/new`)
+      router.push(`/${lng}/chat/new`)
     }, [inputValue, medias, router, lng, setPendingTask])
 
     /** 处理发送消息 */
@@ -252,18 +251,11 @@ export const HomeChat = forwardRef<IHomeChatRef, IHomeChatProps>(
         // 如果用户没有输入，使用占位符文案
         const actualPrompt = inputValue.trim() || defaultPrompt
         sessionStorage.setItem('pendingTask', JSON.stringify({ prompt: actualPrompt, medias }))
-        navigateToLogin(`/chat/new`)
+        navigateToLogin(`/${lng}/chat/new`)
         return
       }
 
-      // 余额不足检查 - 阈值 50（美分）与 LowBalanceAlertProvider 中的 BALANCE_THRESHOLD 一致
-      const creditsBalance = useUserStore.getState().creditsBalance
-      if (creditsBalance < 50) {
-        useAccountStore.getState().setLowBalanceAlertOpen(true)
-        return
-      }
-
-      // 执行发送逻辑
+      // 自部署版不使用云端积分余额；实际凭据、权限及额度由后端/上游验证。
       doSend()
     }, [token, doSend, inputValue, defaultPrompt, medias, lng])
 

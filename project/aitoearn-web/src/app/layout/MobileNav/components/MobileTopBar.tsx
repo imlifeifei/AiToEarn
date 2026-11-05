@@ -9,10 +9,12 @@ import Link from 'next/link'
 import { useTransClient } from '@/app/i18n/client'
 import logo from '@/assets/images/logo.png'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useGetClientLng } from '@/hooks/useSystem'
 import { useUserStore } from '@/store/user'
 import { getOssUrl } from '@/utils/oss'
 
 export function MobileTopBar({ onOpen }: MobileTopBarProps) {
+  const lng = useGetClientLng()
   const { t } = useTransClient('common')
   const token = useUserStore(state => state.token)
   const userInfo = useUserStore(state => state.userInfo)
@@ -21,7 +23,7 @@ export function MobileTopBar({ onOpen }: MobileTopBarProps) {
 
   return (
     <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-14 px-4 bg-background border-b border-border" data-testid="mobile-topbar">
-      <Link href="/" className="flex items-center gap-2" data-testid="mobile-topbar-logo">
+      <Link href={`/${lng}`} className="flex items-center gap-2" data-testid="mobile-topbar-logo">
         <Image src={logo} alt="Aitoearn" width={32} height={32} />
         <span className="text-base font-semibold text-foreground">Aitoearn</span>
       </Link>

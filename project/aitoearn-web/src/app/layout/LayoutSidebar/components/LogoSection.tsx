@@ -10,9 +10,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { BRAND_TITLE, BrandWordmark } from '@/app/layout/shared'
 import logo from '@/assets/images/logo.png'
+import { useGetClientLng } from '@/hooks/useSystem'
 import { cn } from '@/utils/className'
 
 export function LogoSection({ collapsed, onToggle }: LogoSectionProps) {
+  const lng = useGetClientLng()
   return (
     <div
       className={cn(
@@ -25,7 +27,7 @@ export function LogoSection({ collapsed, onToggle }: LogoSectionProps) {
         <div className="relative flex h-8 w-8 items-center justify-center">
           {/* Logo - 默认显示，hover 时隐藏 */}
           <Link
-            href="/"
+            href={`/${lng}`}
             className="flex items-center justify-center transition-opacity group-hover:opacity-0"
             data-testid="sidebar-logo-link"
           >
@@ -43,7 +45,7 @@ export function LogoSection({ collapsed, onToggle }: LogoSectionProps) {
       ) : (
         <>
           <Link
-            href="/"
+            href={`/${lng}`}
             className="group/logo flex items-center gap-2 text-foreground no-underline hover:opacity-85"
             data-testid="sidebar-logo-link"
           >

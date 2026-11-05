@@ -8,22 +8,24 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { useGetClientLng } from '@/hooks/useSystem'
 import { useLoginDialogStore } from '@/store/login-dialog'
 import { useUserStore } from '@/store/user'
 
 export default function AuthRedirect() {
   const token = useUserStore(state => state.token)
   const router = useRouter()
+  const lng = useGetClientLng()
 
   useEffect(() => {
     if (token) {
-      router.replace('/')
+      router.replace(`/${lng}`)
     }
     else {
-      router.replace('/')
+      router.replace(`/${lng}`)
       useLoginDialogStore.getState().openLoginDialog()
     }
-  }, [token, router])
+  }, [token, router, lng])
 
   return null
 }

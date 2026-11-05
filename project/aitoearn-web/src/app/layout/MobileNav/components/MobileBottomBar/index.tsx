@@ -9,6 +9,7 @@ import type { IRouterDataItem } from '@/app/layout/routerData'
 import Link from 'next/link'
 import { useTransClient } from '@/app/i18n/client'
 import { visibleRouterData } from '@/app/layout/routerData'
+import { useGetClientLng } from '@/hooks/useSystem'
 import { cn } from '@/utils/className'
 
 const bottomNavItems = [
@@ -77,6 +78,7 @@ function MobileBottomItem({
   currentRoute: string
 }) {
   const { t } = useTransClient('route')
+  const lng = useGetClientLng()
 
   if (!item?.path) {
     return <div />
@@ -86,7 +88,7 @@ function MobileBottomItem({
 
   return (
     <Link
-      href={item.path}
+      href={item.path === '/' ? `/${lng}` : item.path}
       className={cn(
         'flex h-full min-w-0 cursor-pointer items-center justify-center px-0.5',
         isActive ? 'scale-[1.02]' : 'active:scale-[0.98]',

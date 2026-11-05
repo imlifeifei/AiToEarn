@@ -13,6 +13,7 @@ import { ChatInput } from '@/components/Chat/ChatInput'
 import EditTitleModal from '@/components/common/EditTitleModal'
 import { PublishDetailModal } from '@/components/Plugin/PublishDetailModal'
 import { useDocumentTitle, useMediaUpload } from '@/hooks'
+import { useGetClientLng } from '@/hooks/useSystem'
 import { useAgentStore } from '@/store/agent'
 import { usePluginStore } from '@/store/plugin'
 import { toast } from '@/utils/ui/toast'
@@ -28,7 +29,7 @@ export default function ChatDetailPage() {
   const router = useRouter()
   const params = useParams()
   const taskId = params.taskId as string
-  const lng = params.lng as string
+  const lng = useGetClientLng()
 
   // Store 方法
   const { createTask, continueTask, stopTask, setActionContext, consumePendingTask }
@@ -277,14 +278,14 @@ export default function ChatDetailPage() {
     }
 
     // If there's a previous entry in the history stack, go back.
-    // Otherwise, navigate to the root homepage.
+    // Otherwise, navigate to the current locale's homepage.
     if (typeof window !== 'undefined' && window.history.length > 1) {
       router.back()
     }
     else {
-      router.push('/')
+      router.push(`/${lng}`)
     }
-  }, [router, isGenerating, stopTask])
+  }, [router, lng, isGenerating, stopTask])
 
   /**
    * 收藏切换 - 乐观更新
