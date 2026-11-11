@@ -17,6 +17,7 @@ Downloads and extracts content from social media platforms.
 | Douyin      | `douyin.com/video/xxx`, `v.douyin.com/xxx`           |
 | Xiaohongshu | `xiaohongshu.com/explore/xxx`, `xhslink.com/xxx`     |
 | Kuaishou    | `kuaishou.com/short-video/xxx`, `v.kuaishou.com/xxx` |
+| X (Twitter) | `x.com/user/status/123/video/1`, `twitter.com/user/status/123` |
 
 ## Supported Content Types
 
@@ -40,6 +41,10 @@ Use this skill when user:
 - URL is not from a supported platform
 
 ## Workflow
+
+For a public X or Twitter post, call `mcp__videoUtils__downloadXVideo` with the original `postUrl`. Keep any `/video/N` suffix so the tool downloads the requested video. The tool saves the MP4 to the user's assets and returns `assetId` and `videoUrl`. For a download-only request, return that result. Use media group tools only when the user requests a specific group. If the user asks to publish the video, pass `videoUrl` to the publishing workflow and use the requested destination channel. Report the download or publishing result based on the tools' responses.
+
+For other platforms, use the crawl workflow below.
 
 ### Step 1: Get Social Media URL
 

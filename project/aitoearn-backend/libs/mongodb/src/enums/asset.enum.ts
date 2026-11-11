@@ -25,6 +25,7 @@ export enum AssetType {
 
   // Agent
   AgentSession = 'agentSession',
+  DownloadedVideo = 'downloadedVideo',
 
   // 视频缩略图
   VideoThumbnail = 'videoThumbnail',

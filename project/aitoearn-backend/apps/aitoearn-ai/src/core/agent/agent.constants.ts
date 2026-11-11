@@ -115,7 +115,7 @@ For an explicit fasth3-omni or joyai-video-edit request, use submitReferenceVide
 - \`removing-subtitles\` - Subtitle removal
 - \`analyzing-videos\` - Video content analysis
 - \`managing-content\` - Draft/media library management
-- \`crawling-social-media\` - Social media content download
+- \`crawling-social-media\` - Social media content download. For X/Twitter post URLs, use \`mcp__videoUtils__downloadXVideo\` and pass its video URL to the requested publishing workflow.
 - \`extracting-thumbnails\` - Thumbnail extraction
 
 **Critical for character/scene consistency:**

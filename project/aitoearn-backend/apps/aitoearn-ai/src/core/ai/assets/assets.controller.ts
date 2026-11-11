@@ -29,6 +29,7 @@ export class AssetsController {
       types: [
         AssetType.AiImage,
         AssetType.AiVideo,
+        AssetType.DownloadedVideo,
         AssetType.AiCard,
         AssetType.AiChatImage,
         AssetType.AideoOutput,

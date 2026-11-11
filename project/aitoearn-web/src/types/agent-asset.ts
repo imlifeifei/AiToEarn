@@ -7,6 +7,7 @@
  * Asset 类型枚举
  * - aiImage: AI 生成的图片
  * - aiVideo: AI 生成的视频
+ * - downloadedVideo: 智能体下载的视频
  * - aiCard: AI 生成的卡片
  * - aiChatImage: AI 聊天中生成的图片
  * - aideoOutput: AI 视频输出
@@ -17,6 +18,7 @@
 export type AssetType
   = | 'aiImage'
     | 'aiVideo'
+    | 'downloadedVideo'
     | 'aiCard'
     | 'aiChatImage'
     | 'aideoOutput'
@@ -92,6 +94,7 @@ export interface AssetListVo {
  */
 export const VIDEO_ASSET_TYPES: AssetType[] = [
   'aiVideo',
+  'downloadedVideo',
   'aideoOutput',
   'videoEdit',
   'dramaRecap',

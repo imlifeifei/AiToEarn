@@ -27,6 +27,12 @@ const probeVideoMetadataSchema = z.object({
   videoUrl: FileUtil.zodBuildUrl().nonoptional().describe('Video URL'),
 })
 
+const downloadXVideoSchema = z.object({
+  postUrl: z.string().trim().max(2048)
+    .regex(/^https:\/\/(?:(?:www|mobile)\.)?(?:x\.com|twitter\.com)\/(?:[\w]+\/status|i\/(?:web\/)?status)\/\d+(?:\/video\/[1-9]\d*)?\/?(?:[?#][^\s]*)?$/i)
+    .describe('Public X or Twitter post URL, optionally ending in /video/N to select a video'),
+})
+
 const extractThumbnailSchema = z.object({
   videoUrl: FileUtil.zodBuildUrl().nonoptional().describe('Video URL'),
   timeInSeconds: z.number().min(0).default(1).describe('Time point in seconds to extract frame, default 1 second'),
@@ -47,6 +53,7 @@ export enum VideoUtilsToolName {
   GetVolcVideoInfo = 'getVolcVideoInfo',
   UploadAndGetVid = 'uploadAndGetVid',
   ProbeVideoMetadata = 'probeVideoMetadata',
+  DownloadXVideo = 'downloadXVideo',
   ExtractThumbnail = 'extractThumbnail',
   GenerateSubtitle = 'generateSubtitle',
 }
@@ -79,6 +86,66 @@ export class VideoUtilsMcp {
     private readonly videoMetadataService: VideoMetadataService,
     private readonly chatService: ChatService,
   ) {}
+
+  createDownloadXVideoTool(userId: string, userType: UserType) {
+    return wrapTool(
+      this.logger,
+      VideoUtilsToolName.DownloadXVideo,
+      'Download a public X (Twitter) post video with yt-dlp and save it as a reusable MP4 asset. Preserves /video/N selection and defaults to the first video. Returns a video URL for subsequent publishing tools.',
+      downloadXVideoSchema.shape,
+      async ({ postUrl }) => {
+        const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'aitoearn-x-video-'))
+        const outputPath = path.join(tempDir, 'video.mp4')
+        const maxSize = 200 * 1024 * 1024
+        const source = new URL(postUrl)
+        const videoPath = /\/video\/\d+\/?$/.test(source.pathname)
+          ? source.pathname.replace(/\/$/, '')
+          : `${source.pathname.replace(/\/$/, '')}/video/1`
+        try {
+          await execa('yt-dlp', [
+            '--ignore-config',
+            '--no-plugin-dirs',
+            '--use-extractors', 'twitter',
+            '--no-playlist',
+            '--no-progress',
+            '--socket-timeout', '15',
+            '--max-filesize', String(maxSize),
+            '--format', 'b[ext=mp4][vcodec^=avc1][acodec^=mp4a]/b[ext=mp4]',
+            '--output', outputPath,
+            '--', `https://x.com${videoPath}`,
+          ], { timeout: 120_000 })
+
+          const file = await fs.promises.stat(outputPath).catch((error: NodeJS.ErrnoException) => {
+            if (error.code === 'ENOENT')
+              return undefined
+            throw error
+          })
+          if (!file?.size || file.size > maxSize) {
+            return errorResult('No MP4 was downloaded within the 200 MiB size limit.')
+          }
+
+          const stream = fs.createReadStream(outputPath)
+          try {
+            const filename = `x-${videoPath.split('/').slice(-3).join('-')}.mp4`
+            const { asset, url } = await this.assetsService.uploadFromStream(userId, stream, {
+              type: AssetType.DownloadedVideo,
+              mimeType: 'video/mp4',
+              filename,
+              size: file.size,
+            }, undefined, userType)
+            return successResult({ assetId: asset.id, videoUrl: url, filename })
+          }
+          finally {
+            stream.destroy()
+          }
+        }
+        finally {
+          await fs.promises.rm(tempDir, { recursive: true, force: true })
+        }
+      },
+      this.aiAvailability,
+    )
+  }
 
   /**
    * 获取火山引擎视频信息（仅支持 VID）
@@ -441,6 +508,7 @@ You can use this SRT URL in video editing to add subtitles.`)
         this.createGetVolcVideoInfoTool(userId, userType),
         this.createUploadAndGetVidTool(userId, userType),
         this.createProbeVideoMetadataTool(userId, userType),
+        this.createDownloadXVideoTool(userId, userType),
         this.createExtractThumbnailTool(userId, userType),
         // this.createGenerateSubtitleTool(userId, userType),
       ],

@@ -12,7 +12,7 @@ FROM node:24-alpine AS production
 
 ARG APP_NAME
 
-RUN apk add --no-cache curl ffmpeg
+RUN apk add --no-cache curl ffmpeg yt-dlp
 RUN npm install -g pm2
 
 WORKDIR /app
