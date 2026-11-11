@@ -3,7 +3,11 @@ name: editing-videos
 description: Video editing using Volcengine Track structure. Supports cutting, trimming, adding text, stickers, audio, filters, effects, transitions, multi-clip compositions, speed adjustment, watermark removal. 视频剪辑、裁剪视频、添加文字、添加水印、添加音频、视频滤镜、视频特效、视频转场、多片段拼接、调整速度、去水印。
 ---
 
-# Video Editing with Track Structure
+# Video Editing
+
+For `joyai-video-edit`, use `submitReferenceVideo` with the original AiToEarn video attachment URL. Ask for the original video if it is missing. An image attachment is optional. The tool edits up to the first 5 seconds. Query the returned task ID with `getReferenceVideoStatus`.
+
+## Editing with Track Structure
 
 Performs video editing using the Volcengine cloud editing API with native Track structure.
 

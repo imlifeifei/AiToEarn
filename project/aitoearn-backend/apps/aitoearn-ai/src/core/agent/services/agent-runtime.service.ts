@@ -269,6 +269,7 @@ export class AgentRuntimeService {
             'ListMcpResourcesTool',
             'ReadMcpResourceTool',
             `mcp__${McpServerName.MediaGeneration}__getVideoStatus`,
+            `mcp__${McpServerName.MediaGeneration}__${MediaToolName.GetReferenceVideoStatus}`,
             `mcp__${McpServerName.MediaGeneration}__getSoraCharacter`,
             `mcp__${McpServerName.Aideo}__getAideoTaskStatus`,
             `mcp__${McpServerName.VideoEdit}__getVideoEditTaskStatus`,
@@ -298,7 +299,7 @@ export class AgentRuntimeService {
           {
             hooks: [
               async (input) => {
-                if (input.hook_event_name === 'PostToolUse') {
+                if (input.hook_event_name === 'PostToolUse' && !config.ai.relay?.openAiVideoModels) {
                   this.logger.debug({ input }, 'Received PostToolUse hook')
                   const response = input.tool_response
                   if (Array.isArray(response)) {
@@ -898,10 +899,20 @@ export class AgentRuntimeService {
     systemPromptContent: ContentBlockParam[]
   }> {
     const normalizedContent = normalizePrompt(dto.prompt)
-    const relayContent = await this.resolveRelayJson(normalizedContent)
+    const enhancedContent = config.ai.relay?.openAiVideoModels
+      // Keep the attachment URL in the reference list for local tools.
+      // The remote chat model cannot fetch images from the local storage endpoint.
+      ? enhancePrompt(normalizedContent).filter((block) => {
+          if (block.type !== 'image' || block.source.type !== 'url')
+            return true
+          const url = block.source.url
+          return ![config.assets.endpoint, config.assets.cdnEndpoint]
+            .some(endpoint => endpoint && url.startsWith(`${endpoint.replace(/\/+$/, '')}/`))
+        })
+      : enhancePrompt(await this.resolveRelayJson(normalizedContent))
     return {
       normalizedContent,
-      enhancedContent: enhancePrompt(relayContent),
+      enhancedContent,
       systemPromptContent: await this.buildSystemPromptContent(),
     }
   }

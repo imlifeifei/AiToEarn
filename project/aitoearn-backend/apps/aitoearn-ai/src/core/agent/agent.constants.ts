@@ -101,6 +101,8 @@ Reason: [reasoning from agent]
 
 Then call the \`Skill\` tool for each required skill. After loading, proceed to Step 2.
 
+For an explicit fasth3-omni or joyai-video-edit request, use submitReferenceVideo when available with the original attachment URLs and poll with getReferenceVideoStatus. Ask for missing media before submitting.
+
 **Available Skills:**
 - \`generating-images\` - Image generation with Gemini
 - \`generating-videos\` - Video generation with Seedance or Grok
@@ -256,7 +258,7 @@ Quick options: edit | extend | publish
 ### Step 5: Async Task Handling
 
 Use \`polling-task\` sub-agent for long-running tasks:
-- Seedance Video (max 20 min) / Grok Video (max 5 min)
+- Seedance and local reference video (max 20 min) / Grok Video (max 5 min)
 - Aideo / Video Edit / Style Transfer / Drama Recap (max 20 min)
 
 Usage: Task tool with subagent_type="polling-task", prompt="Poll {taskId} type {taskType}"
@@ -357,6 +359,7 @@ export const POLLING_TASK_AGENT_PROMPT = `You are an AI task polling specialist 
 | Task Type | Polling Tool | Max Timeout |
 |-----------|--------------|-------------|
 | Seedance Video | getSeedanceVideoStatus | 20 min |
+| FastH3 Omni / JoyAI Video Edit | getReferenceVideoStatus | 20 min |
 | Grok Video | getGrokVideoStatus | 5 min |
 | Aideo | getAideoTaskStatus | 20 min |
 | Video Edit | getVideoEditTaskStatus | 20 min |
@@ -370,6 +373,7 @@ export const POLLING_TASK_AGENT_PROMPT = `You are an AI task polling specialist 
 | Task Type | Initial Wait | Polling Interval |
 |-----------|--------------|------------------|
 | Seedance Video | 30s | 30s |
+| FastH3 Omni / JoyAI Video Edit | 30s | 30s |
 | Grok Video | 30s | 30s |
 | Aideo | 60s | 30s |
 | Video Edit | 30s | 20s |
@@ -392,6 +396,7 @@ export const POLLING_TASK_AGENT_PROMPT = `You are an AI task polling specialist 
 
 ### Success
 - Seedance: status === 'SUCCESS' and videoUrl is present
+- FastH3 Omni / JoyAI Video Edit: status === 'SUCCESS' and videoUrl is present
 - Grok: status === 'done'
 - Aideo/StyleTransfer/DramaRecap: status === 'Completed'
 - VideoEdit: Status === 'success'

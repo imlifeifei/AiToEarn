@@ -64,6 +64,12 @@ const generateVideoWithSeedanceSchema = z.object({
 const getSeedanceVideoStatusSchema = z.object({
   taskId: z.string().regex(/^[a-f0-9]{24}$/i).describe('Task ID returned from generateVideoWithSeedance'),
 })
+const submitReferenceVideoSchema = z.object({
+  model: z.enum(['fasth3-omni', 'joyai-video-edit']),
+  prompt: z.string().trim().min(1).max(4000),
+  imageUrl: z.url().optional().describe('Original AiToEarn image attachment URL'),
+  videoUrl: z.url().optional().describe('Original AiToEarn video attachment URL'),
+})
 
 export enum MediaToolName {
   GenerateImage = 'generateImage',
@@ -75,6 +81,8 @@ export enum MediaToolName {
   GetGrokVideoStatus = 'getGrokVideoStatus',
   GenerateVideoWithSeedance = 'generateVideoWithSeedance',
   GetSeedanceVideoStatus = 'getSeedanceVideoStatus',
+  SubmitReferenceVideo = 'submitReferenceVideo',
+  GetReferenceVideoStatus = 'getReferenceVideoStatus',
 }
 
 @Injectable()
@@ -348,6 +356,50 @@ Example: "@character1 walks through a garden"`,
     )
   }
 
+  createSubmitReferenceVideoTool(userId: string, userType: UserType, models: string[]) {
+    return wrapTool(
+      this.logger,
+      MediaToolName.SubmitReferenceVideo,
+      `Submit a local reference video task. Enabled models: ${models.join(', ')}. FastH3 Omni requires an image or video and generates about 5 seconds. JoyAI Video Edit requires an original video, edits its first 5 seconds, and accepts an optional reference image. Use original AiToEarn attachment URLs. Submit once and use getReferenceVideoStatus with the returned taskId.`,
+      submitReferenceVideoSchema.shape,
+      async ({ model, prompt, imageUrl, videoUrl }) => {
+        if (!models.includes(model))
+          return errorResult(`Video model is unavailable: ${model}`)
+        if (model === 'joyai-video-edit' && !videoUrl)
+          return errorResult('JoyAI Video Edit requires an original video.')
+        if (!imageUrl && !videoUrl)
+          return errorResult('FastH3 Omni requires a reference image or video.')
+        const { id } = await this.videoService.userVideoGeneration({
+          userId,
+          userType,
+          model,
+          prompt,
+          mode: model === 'joyai-video-edit' ? 'video2video' : videoUrl ? 'multi-ref' : 'image2video',
+          video_url: videoUrl,
+          image: imageUrl,
+        })
+        return successResult({ model, taskId: id, status: 'submitted' })
+      },
+      this.aiAvailability,
+    )
+  }
+
+  createGetReferenceVideoStatusTool(userId: string, userType: UserType) {
+    return wrapTool(
+      this.logger,
+      MediaToolName.GetReferenceVideoStatus,
+      'Check the status of a task returned by submitReferenceVideo. Returns the saved video URL when complete.',
+      { taskId: z.string().regex(/^[a-f0-9]{24}$/i) },
+      async ({ taskId }) => {
+        const result = await this.videoService.getVideoTaskStatus({ userId, userType, taskId })
+        if (result.error)
+          return errorResult({ taskId, status: result.status, error: result.error.message })
+        return successResult({ taskId, status: result.status, videoUrl: result.videoUrl })
+      },
+      this.aiAvailability,
+    )
+  }
+
   createGenerateVideoWithGrokTool(userId: string, userType: UserType) {
     return wrapTool(
       this.logger,
@@ -417,12 +469,20 @@ Returns task ID for status tracking.`,
     const seedanceTools = config.ai.relay?.openAiVideoModels?.[seedanceVideoModel]
       ? [this.createGenerateVideoWithSeedanceTool(userId, userType), this.createGetSeedanceVideoStatusTool(userId, userType)]
       : []
+    const referenceModels = submitReferenceVideoSchema.shape.model.options.filter(model =>
+      config.ai.relay?.multipartVideoReferenceModels?.includes(model)
+      && config.ai.relay.openAiVideoModels?.[model]?.['default']
+      && config.ai.models.video.generation.some(item => item.name === model && item.channel === 'relay'),
+    )
     return createSdkMcpServer({
       name: McpServerName.MediaGeneration,
       version: '1.0.0',
       tools: [
         this.createGenerateImageTool(userId, userType),
         ...seedanceTools,
+        ...(referenceModels.length > 0
+          ? [this.createSubmitReferenceVideoTool(userId, userType, referenceModels), this.createGetReferenceVideoStatusTool(userId, userType)]
+          : []),
         // this.createGenerateVideoTool(userId, userType),
         // this.createGetVideoStatusTool(userId, userType),
         // this.createSoraCharacterTool(userId, userType),

@@ -1,6 +1,6 @@
 ---
 name: generating-videos
-description: Generates videos using the configured Seedance or Grok tool. AI视频生成、文生视频、图生视频。
+description: Generates videos using configured video models including FastH3 Omni. AI视频生成、文生视频、图生视频。
 ---
 
 # Video Generation
@@ -10,6 +10,8 @@ description: Generates videos using the configured Seedance or Grok tool. AI视�
 For text-to-video with no model specified, use Seedance 2.0 when `generateVideoWithSeedance` is available. It accepts a prompt, a duration of 4–15 seconds, and a supported aspect ratio. State the model in the execution plan.
 
 If the user explicitly requests Grok, use `generateVideoWithGrok`. If Grok is unavailable, report that and ask before switching models. When Seedance is unavailable, use configured Grok for text-to-video. Grok also accepts one reference image for image-to-video.
+
+For `fasth3-omni`, use `submitReferenceVideo` with the original AiToEarn image or video attachment URL. If a required attachment is missing, ask the user to upload it. This model generates a clip of about 5 seconds. Query the returned task ID with `getReferenceVideoStatus`.
 
 ## Language Rule
 
