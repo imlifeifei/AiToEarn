@@ -1,22 +1,15 @@
 ---
 name: generating-videos
-description: Generates videos using Grok. Supports text-to-video and image-to-video. AI视频生成、文生视频、图生视频。
+description: Generates videos using the configured Seedance or Grok tool. AI视频生成、文生视频、图生视频。
 ---
 
 # Video Generation
 
-Generates videos using **Grok**.
-
 ## Model Selection Strategy
 
-Use `grok-imagine-video` for video generation.
+For text-to-video with no model specified, use Seedance 2.0 when `generateVideoWithSeedance` is available. It accepts a prompt, a duration of 4–15 seconds, and a supported aspect ratio. State the model in the execution plan.
 
-| Scenario | Use Model | Reason |
-|----------|-----------|--------|
-| Video 1-15s | `grok-imagine-video` | Grok supports direct 1-15s generation |
-| Text-to-video | `grok-imagine-video` | Prompt-only generation |
-| Image-to-video | `grok-imagine-video` | Uses one reference image |
-| Video >15s | Generate multiple clips, then load `editing-videos` to concatenate | Grok max duration is 15s |
+If the user explicitly requests Grok, use `generateVideoWithGrok`. If Grok is unavailable, report that and ask before switching models. When Seedance is unavailable, use configured Grok for text-to-video. Grok also accepts one reference image for image-to-video.
 
 ## Language Rule
 
@@ -26,9 +19,9 @@ Video prompts MUST follow the user's language. If the user writes in Chinese, ge
 
 | Model | Speed | Quality | Max Duration | Use Case |
 |-------|-------|---------|--------------|----------|
-| `grok-imagine-video` | Fast | Good | 15s | Default video generation |
+| `grok-imagine-video` | Fast | Good | 15s | Grok video and image-to-video |
 
-## Parameters
+## Grok Parameters
 
 | Parameter | Values | Default | Description |
 |-----------|--------|---------|-------------|
@@ -39,9 +32,9 @@ Video prompts MUST follow the user's language. If the user writes in Chinese, ge
 
 ## Workflow
 
-1. Call `generateVideoWithGrok` with prompt and optional parameters.
-2. Poll `getGrokVideoStatus` every 30 seconds.
-3. Maximum wait: 5 minutes.
+1. Call the generation tool for the selected model and retain its returned task ID. If submission fails, report the error. Poll only after a task ID is returned.
+2. Poll every 30 seconds using `getSeedanceVideoStatus` for Seedance or `getGrokVideoStatus` for Grok.
+3. Allow up to 20 minutes for Seedance and 5 minutes for Grok.
 4. Save completed output to draft unless the user explicitly asks for media library only.
 
 ## Prompt Structure
@@ -117,7 +110,7 @@ Examples:
 For videos longer than 15 seconds:
 
 1. Split the video into independent 15-second-or-shorter segments.
-2. Generate each segment with `generateVideoWithGrok`.
+2. Generate each segment with the selected video tool.
 3. Poll every task until complete.
 4. Load `editing-videos`.
 5. Use the video editing tool to concatenate the completed segments.

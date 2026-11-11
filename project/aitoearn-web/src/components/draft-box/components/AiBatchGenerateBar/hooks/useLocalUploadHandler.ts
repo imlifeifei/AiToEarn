@@ -165,7 +165,7 @@ export function useLocalUploadHandler({
           currentVideoModelConfig.maxAudioDuration,
         )
         const willUseVideoEditMode = shouldUseVideoEditMode(selectedVideoModelInfos)
-        const videoEditDurationLimits = willUseVideoEditMode
+        const videoEditDurationLimits = willUseVideoEditMode && !videoConstraint
           ? getVideoDurationLimits(selectedVideoModelInfos, resolvedVideoModelResolutions, true)
           : null
         const minVideoDuration = Math.max(

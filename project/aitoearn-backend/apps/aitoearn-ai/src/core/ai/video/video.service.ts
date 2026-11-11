@@ -239,9 +239,9 @@ export class VideoService {
    * 查询视频任务状态
    */
   async getVideoTaskStatus(request: UserVideoTaskQueryDto) {
-    const { taskId } = request
+    const { taskId, userId, userType } = request
 
-    const aiLog = await this.aiLogRepo.getById(taskId)
+    const aiLog = await this.aiLogRepo.getByIdAndUserId(taskId, userId, userType)
 
     if (aiLog == null || aiLog.type !== AiLogType.Video) {
       throw new AppException(ResponseCode.InvalidAiTaskId)

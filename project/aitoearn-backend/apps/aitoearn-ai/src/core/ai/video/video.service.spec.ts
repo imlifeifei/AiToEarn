@@ -11,6 +11,7 @@ describe('videoService', () => {
   let mockAiLogRepo: {
     updateById: ReturnType<typeof vi.fn>
     getById: ReturnType<typeof vi.fn>
+    getByIdAndUserId: ReturnType<typeof vi.fn>
   }
   let mockMaterialGroupRepository: {
     getInfo: ReturnType<typeof vi.fn>
@@ -80,6 +81,7 @@ describe('videoService', () => {
     mockAiLogRepo = {
       updateById: vi.fn(),
       getById: vi.fn(),
+      getByIdAndUserId: vi.fn(),
     }
     mockMaterialGroupRepository = {
       getInfo: vi.fn(),
@@ -161,6 +163,17 @@ describe('videoService', () => {
       id: 'task-1',
       status: TaskStatus.Submitted,
     })
+  })
+
+  it('查询视频状态时拒绝其他用户的任务', async () => {
+    mockAiLogRepo.getById.mockResolvedValue(createAiLog({}))
+    mockAiLogRepo.getByIdAndUserId.mockResolvedValue(null)
+
+    await expect(service.getVideoTaskStatus({
+      taskId: 'ai-1',
+      userId: 'another-user',
+      userType: UserType.User,
+    })).rejects.toMatchObject({ code: ResponseCode.InvalidAiTaskId })
   })
 
   it('成功任务带 groupId 时会自动保存到素材并返回保存结果', async () => {

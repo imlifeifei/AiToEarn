@@ -70,6 +70,75 @@ describe('relayLibService', () => {
     })
   })
 
+  it('maps OpenAI video submission, polling and authenticated content paths', async () => {
+    service = new RelayLibService(
+      {
+        url: 'https://relay.example.com',
+        apiKey: 'relay-key',
+        timeout: 1000,
+        openAiVideoModels: { seedance: { '720p': 'seedance2.0-720p-100%' } },
+      },
+      { execute: vi.fn((_context, fn) => fn()) } as unknown as AiAvailabilityService,
+    )
+    expect(Reflect.get(service, 'httpClient').defaults.headers.Authorization).toBe('Bearer relay-key')
+    const failedVideo = {
+      status: 'failed',
+      fail_reason: 'Upstream task failed',
+      data: { status: 'in_progress' },
+    }
+    expect(normalizeResponse(failedVideo)).toEqual(failedVideo)
+    Object.assign(service, { httpClient })
+    httpClient.post.mockResolvedValue({ data: { task_id: 'remote-id', status: 'queued' } })
+    httpClient.get.mockResolvedValueOnce({ data: { status: 'completed' } })
+    httpClient.get.mockResolvedValueOnce({ data: Buffer.from('video') })
+
+    await expect(service.createVideo({ model: 'seedance', prompt: 'test', resolution: '720p' }))
+      .resolves.toMatchObject({ id: 'remote-id', status: 'queued' })
+    expect(httpClient.post).toHaveBeenCalledWith('/v1/videos', {
+      model: 'seedance2.0-720p-100%',
+      prompt: 'test',
+      resolution: '720p',
+    })
+    await expect(service.getVideo('remote-id')).resolves.toEqual({ id: 'remote-id', status: 'completed' })
+    expect(httpClient.get).toHaveBeenCalledWith('/v1/videos/remote-id')
+    await expect(service.downloadVideoContent('remote-id')).resolves.toEqual(Buffer.from('video'))
+    expect(httpClient.get).toHaveBeenCalledWith('/v1/videos/remote-id/content', { responseType: 'arraybuffer' })
+    httpClient.get.mockResolvedValueOnce({ data: failedVideo })
+    await expect(service.getVideo('remote-id')).resolves.toMatchObject({
+      id: 'remote-id',
+      status: 'failed',
+      error: 'Upstream task failed',
+    })
+  })
+
+  it('uploads reference files with the mapped video model and duration', async () => {
+    service = new RelayLibService(
+      {
+        url: 'https://relay.example.com',
+        apiKey: 'relay-key',
+        timeout: 1000,
+        openAiVideoModels: { 'fasth3-omni': { '480p': 'fasth3-omni' } },
+        multipartVideoReferenceModels: ['fasth3-omni'],
+      },
+      { execute: vi.fn((_context, fn) => fn()) } as unknown as AiAvailabilityService,
+    )
+    Object.assign(service, { httpClient })
+    httpClient.post.mockResolvedValue({ data: { id: 'remote-id', status: 'queued' } })
+    const buffer = Buffer.from('reference')
+    await expect(service.createVideo(
+      { model: 'fasth3-omni', prompt: 'Animate the reference', duration: 5, resolution: '480p' },
+      { image: { buffer, mimeType: 'image/png' } },
+    )).resolves.toMatchObject({ id: 'remote-id' })
+
+    const [url, form] = httpClient.post.mock.calls[0] as [string, FormData]
+    expect(url).toBe('/v1/videos')
+    expect(form.get('model')).toBe('fasth3-omni')
+    expect(form.get('seconds')).toBe('5')
+    const image = form.get('image') as File
+    expect(image.type).toBe('image/png')
+    expect(Buffer.from(await image.arrayBuffer())).toEqual(buffer)
+  })
+
   it('throws AppException with original response code when common response code is not success', () => {
     expect(() => normalizeResponse({
       code: ResponseCode.InvalidModel,

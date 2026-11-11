@@ -23,6 +23,11 @@ export interface RelayVideoGenerationRequest {
   groupId?: string
 }
 
+export type RelayVideoReferences = Partial<Record<'image' | 'video' | 'audio', {
+  buffer: Buffer
+  mimeType: string
+}>>
+
 /**
  * 上游 relay 服务端提交视频任务的响应体。
  * 对应 VideoGenerationResponseVo { id, status }。

@@ -63,20 +63,8 @@ export function getDraftGenerationTaskTarget(task: DraftGenerationTask): 'draft'
   return 'draft'
 }
 
-export function hasDraftGenerationTaskPartialResult(task: DraftGenerationTask) {
-  const response = getResponseObject(task)
-  return Boolean(
-    response?.imageUrls?.length
-    || response?.videoUrl
-    || response?.coverUrl
-    || response?.title
-    || response?.description
-    || response?.plan,
-  )
-}
-
 export function shouldShowDraftGenerationTaskCard(task: DraftGenerationTask) {
-  return task.status === 'generating' || (task.status === 'failed' && hasDraftGenerationTaskPartialResult(task))
+  return task.status === 'generating'
 }
 
 export const GeneratingCard = memo(({ count, onClick }: GeneratingCardProps) => {

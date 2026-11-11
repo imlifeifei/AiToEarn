@@ -4,9 +4,10 @@ import { FileUtil, UserType } from '@yikart/common'
 import { AiLogStatus } from '@yikart/mongodb'
 import dayjs from 'dayjs'
 import { z } from 'zod'
+import { config } from '../../../config'
 import { AiAvailabilityService } from '../../ai-availability'
 import { ImageService } from '../../ai/image'
-import { GrokVideoService, OpenAIVideoService } from '../../ai/video'
+import { GrokVideoService, OpenAIVideoService, VideoService } from '../../ai/video'
 import { McpServerName } from '../agent.constants'
 import { errorResult, successResult, wrapTool } from './mcp.utils'
 
@@ -54,6 +55,16 @@ const getGrokVideoStatusSchema = z.object({
   taskId: z.string().describe('Task ID returned from generateVideoWithGrok'),
 })
 
+const seedanceVideoModel = 'seedance-2-fast-beta'
+const generateVideoWithSeedanceSchema = z.object({
+  prompt: z.string().min(1).max(4000).describe('Video description prompt'),
+  duration: z.number().int().min(4).max(15).default(8).describe('Video duration in seconds'),
+  aspectRatio: z.enum(['9:16', '16:9', '1:1', '4:3', '3:4']).default('9:16').describe('Video aspect ratio'),
+})
+const getSeedanceVideoStatusSchema = z.object({
+  taskId: z.string().regex(/^[a-f0-9]{24}$/i).describe('Task ID returned from generateVideoWithSeedance'),
+})
+
 export enum MediaToolName {
   GenerateImage = 'generateImage',
   GenerateVideo = 'generateVideo',
@@ -62,6 +73,8 @@ export enum MediaToolName {
   GetSoraCharacter = 'getSoraCharacter',
   GenerateVideoWithGrok = 'generateVideoWithGrok',
   GetGrokVideoStatus = 'getGrokVideoStatus',
+  GenerateVideoWithSeedance = 'generateVideoWithSeedance',
+  GetSeedanceVideoStatus = 'getSeedanceVideoStatus',
 }
 
 @Injectable()
@@ -73,6 +86,7 @@ export class MediaMcp {
     private readonly imageService: ImageService,
     private readonly aiAvailability: AiAvailabilityService,
     private readonly grokVideoService: GrokVideoService,
+    private readonly videoService: VideoService,
   ) { }
 
   createGenerateImageTool(userId: string, userType: UserType) {
@@ -295,11 +309,50 @@ Example: "@character1 walks through a garden"`,
     )
   }
 
+  createGenerateVideoWithSeedanceTool(userId: string, userType: UserType) {
+    return wrapTool(
+      this.logger,
+      MediaToolName.GenerateVideoWithSeedance,
+      'Generate a 720p video from text with Seedance 2.0 through the configured relay. Use for video generation when the user does not specify a model. Returns a task ID for getSeedanceVideoStatus.',
+      generateVideoWithSeedanceSchema.shape,
+      async ({ prompt, duration, aspectRatio }) => {
+        const { id } = await this.videoService.userVideoGeneration({
+          userId,
+          userType,
+          model: seedanceVideoModel,
+          prompt,
+          mode: 'text2video',
+          duration,
+          resolution: '720p',
+          ratio: aspectRatio,
+        })
+        return successResult({ model: seedanceVideoModel, taskId: id, status: 'submitted' })
+      },
+      this.aiAvailability,
+    )
+  }
+
+  createGetSeedanceVideoStatusTool(userId: string, userType: UserType) {
+    return wrapTool(
+      this.logger,
+      MediaToolName.GetSeedanceVideoStatus,
+      'Check a Seedance video task. Returns the video URL when complete. Use the task ID from generateVideoWithSeedance.',
+      getSeedanceVideoStatusSchema.shape,
+      async ({ taskId }) => {
+        const result = await this.videoService.getVideoTaskStatus({ userId, userType, taskId })
+        if (result.error)
+          return errorResult(result.error.message)
+        return successResult({ taskId, status: result.status, videoUrl: result.videoUrl })
+      },
+      this.aiAvailability,
+    )
+  }
+
   createGenerateVideoWithGrokTool(userId: string, userType: UserType) {
     return wrapTool(
       this.logger,
       MediaToolName.GenerateVideoWithGrok,
-      `Generate a video using Grok video model.
+      `Generate a video using Grok when the user explicitly requests it or no other video tool is available. A Grok API key must be configured.
 
 **IMPORTANT: Use the same language as the user's request for the video prompt.**
 
@@ -320,6 +373,8 @@ Example: "@character1 walks through a garden"`,
 Returns task ID for status tracking.`,
       generateVideoWithGrokSchema.shape,
       async ({ prompt, model, aspectRatio, resolution, duration, imageUrl }) => {
+        if (!config.ai.grok.apiKey.trim())
+          return errorResult('Grok video is unavailable because no Grok API key is configured.')
         const response = await this.grokVideoService.createVideo({
           userId,
           userType,
@@ -359,11 +414,15 @@ Returns task ID for status tracking.`,
   }
 
   createServer(userId: string, userType: UserType): McpSdkServerConfigWithInstance {
+    const seedanceTools = config.ai.relay?.openAiVideoModels?.[seedanceVideoModel]
+      ? [this.createGenerateVideoWithSeedanceTool(userId, userType), this.createGetSeedanceVideoStatusTool(userId, userType)]
+      : []
     return createSdkMcpServer({
       name: McpServerName.MediaGeneration,
       version: '1.0.0',
       tools: [
         this.createGenerateImageTool(userId, userType),
+        ...seedanceTools,
         // this.createGenerateVideoTool(userId, userType),
         // this.createGetVideoStatusTool(userId, userType),
         // this.createSoraCharacterTool(userId, userType),

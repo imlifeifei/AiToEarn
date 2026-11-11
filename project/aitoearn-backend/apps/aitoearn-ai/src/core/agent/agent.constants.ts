@@ -103,7 +103,7 @@ Then call the \`Skill\` tool for each required skill. After loading, proceed to 
 
 **Available Skills:**
 - \`generating-images\` - Image generation with Gemini
-- \`generating-videos\` - Video generation with Grok
+- \`generating-videos\` - Video generation with Seedance or Grok
 - \`editing-videos\` - Video editing, concatenation
 - \`editing-images\` - Image editing, compositing
 - \`transferring-video-styles\` - Style transfer (cartoon, anime)
@@ -172,8 +172,8 @@ Add "Starting execution..." after the plan and proceed directly. Provide progres
 **⚠️ WRONG - Never do this:**
 \`\`\`
 User: 生成一个猫咪视频
-AI: 我来使用 Grok 生成视频...
-[直接调用 generateVideoWithGrok 工具]
+AI: 我来生成视频...
+[直接调用视频生成工具]
 \`\`\`
 
 **✅ CORRECT - Always do this:**
@@ -187,12 +187,12 @@ AI: 🔧 **Loading Skills**
 
 📋 **Execution Plan**
 **Requirements**: 生成一个猫咪视频
-**Steps**: 1. 使用 Grok 生成 8 秒视频
-**Resources**: Model: grok-imagine-video, Duration: 8s, Aspect Ratio: 9:16
+**Steps**: 1. 使用已配置的 Seedance 生成 8 秒视频
+**Resources**: Model: Seedance 2.0, Duration: 8s, Aspect Ratio: 9:16
 
 Starting execution...
 
-[调用 generateVideoWithGrok 工具]
+[调用 generateVideoWithSeedance 工具]
 \`\`\`
 
 ---
@@ -256,7 +256,7 @@ Quick options: edit | extend | publish
 ### Step 5: Async Task Handling
 
 Use \`polling-task\` sub-agent for long-running tasks:
-- Grok Video (max 5 min)
+- Seedance Video (max 20 min) / Grok Video (max 5 min)
 - Aideo / Video Edit / Style Transfer / Drama Recap (max 20 min)
 
 Usage: Task tool with subagent_type="polling-task", prompt="Poll {taskId} type {taskType}"
@@ -356,6 +356,7 @@ export const POLLING_TASK_AGENT_PROMPT = `You are an AI task polling specialist 
 
 | Task Type | Polling Tool | Max Timeout |
 |-----------|--------------|-------------|
+| Seedance Video | getSeedanceVideoStatus | 20 min |
 | Grok Video | getGrokVideoStatus | 5 min |
 | Aideo | getAideoTaskStatus | 20 min |
 | Video Edit | getVideoEditTaskStatus | 20 min |
@@ -368,6 +369,7 @@ export const POLLING_TASK_AGENT_PROMPT = `You are an AI task polling specialist 
 
 | Task Type | Initial Wait | Polling Interval |
 |-----------|--------------|------------------|
+| Seedance Video | 30s | 30s |
 | Grok Video | 30s | 30s |
 | Aideo | 60s | 30s |
 | Video Edit | 30s | 20s |
@@ -389,6 +391,7 @@ export const POLLING_TASK_AGENT_PROMPT = `You are an AI task polling specialist 
 ## Status Indicators
 
 ### Success
+- Seedance: status === 'SUCCESS' and videoUrl is present
 - Grok: status === 'done'
 - Aideo/StyleTransfer/DramaRecap: status === 'Completed'
 - VideoEdit: Status === 'success'
@@ -419,7 +422,7 @@ Analyze user requests and determine which skills are needed.
 | Skill | Description | Keywords |
 |-------|-------------|----------|
 | generating-images | Image generation with Gemini | 图片, 图像, image, 照片, 画 |
-| generating-videos | Video generation with Grok | 视频, video, 短视频, 动画 |
+| generating-videos | Video generation with Seedance or Grok | 视频, video, 短视频, 动画 |
 | editing-videos | Video editing, concatenation | 剪辑, 拼接, 合并, 裁剪 |
 | editing-images | Image editing, compositing | 编辑图片, 修图, 合成 |
 | transferring-video-styles | Style transfer (cartoon, anime) | 风格, style, 漫画风, 动画风 |

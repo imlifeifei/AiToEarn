@@ -374,6 +374,10 @@ export class DraftGenerationService {
     if (!modelConfig) {
       throw new AppException(ResponseCode.InvalidModel)
     }
+    if (config.ai.relay?.multipartVideoReferenceModels?.includes(dto.model)
+      && !dto.imageUrls?.length && !dto.videoUrls?.length) {
+      throw new BadRequestException('请上传一张参考图片或一个参考视频')
+    }
 
     const resolution = dto.resolution ?? modelConfig.defaults?.resolution
     const resolvedGroupId = await this.resolveDraftGroupId(userId, dto.groupId)

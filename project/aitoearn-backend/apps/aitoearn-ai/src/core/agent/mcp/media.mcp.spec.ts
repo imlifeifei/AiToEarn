@@ -4,7 +4,7 @@ import { UserType } from '@yikart/common'
 import { AiLogStatus } from '@yikart/mongodb'
 import { vi } from 'vitest'
 import { ImageService } from '../../ai/image'
-import { GrokVideoService, OpenAIVideoService } from '../../ai/video'
+import { GrokVideoService, OpenAIVideoService, VideoService } from '../../ai/video'
 import { MediaMcp, MediaToolName } from './media.mcp'
 
 describe('mediaMcp', () => {
@@ -47,6 +47,7 @@ describe('mediaMcp', () => {
       mockImageService,
       mockAiAvailability as unknown as AiAvailabilityService,
       mockGrokVideoService,
+      {} as VideoService,
     )
     // Override the logger for testing
     Object.defineProperty(mediaMcp, 'logger', { value: mockLogger })

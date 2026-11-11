@@ -1,3 +1,4 @@
+import type { AssetsService, StorageProvider } from '@yikart/assets'
 import type { AiLog, AiLogRepository } from '@yikart/mongodb'
 import type { AiAvailabilityService } from '../../../ai-availability/ai-availability.service'
 import type { RelayLibService } from '../../libs/relay'
@@ -7,6 +8,8 @@ import { UserType } from '@yikart/common'
 import { AiLogChannel, AiLogStatus, AiLogType } from '@yikart/mongodb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RelayVideoService } from './relay-video.service'
+
+vi.mock('@yikart/assets', () => ({ AssetsService: class AssetsService {}, StorageProvider: class StorageProvider {} }))
 
 vi.mock('../../models-config', () => ({ ModelsConfigService: class ModelsConfigService {} }))
 
@@ -32,11 +35,13 @@ vi.mock('@yikart/mongodb', () => ({
   AiLogType: {
     Video: 'video',
   },
+  AssetType: { AiVideo: 'ai-video' },
 }))
 
 describe('relayVideoService', () => {
   let service: RelayVideoService
-  let mockRelayLibService: vi.Mocked<Pick<RelayLibService, 'createVideo'>>
+  let mockRelayLibService: vi.Mocked<Pick<RelayLibService, 'createVideo' | 'downloadVideoContent' | 'usesMultipartVideoReferences'>>
+  let uploadFromBuffer: ReturnType<typeof vi.fn>
   let mockAiLogRepo: vi.Mocked<Pick<AiLogRepository, 'create' | 'getByTaskId' | 'updateByIdAndStatus'>>
   let mockAiAvailability: vi.Mocked<Pick<AiAvailabilityService, 'executeAsync' | 'recordAsyncComplete'>>
   let mockRelayMediaResolver: vi.Mocked<Pick<RelayMediaResolverService, 'resolveJson'>>
@@ -58,7 +63,10 @@ describe('relayVideoService', () => {
   beforeEach(() => {
     mockRelayLibService = {
       createVideo: vi.fn().mockResolvedValue({ id: 'relay-task-1', status: 'queued' }),
+      downloadVideoContent: vi.fn(),
+      usesMultipartVideoReferences: vi.fn().mockReturnValue(false),
     }
+    uploadFromBuffer = vi.fn().mockResolvedValue({ asset: { path: 'videos/result.mp4' } })
     mockAiLogRepo = {
       create: vi.fn().mockResolvedValue({ id: 'ai-log-1' }),
       getByTaskId: vi.fn(),
@@ -77,7 +85,29 @@ describe('relayVideoService', () => {
       mockAiLogRepo as AiLogRepository,
       { config: { video: { generation: [relayModel] } } } as unknown as ModelsConfigService,
       mockAiAvailability as AiAvailabilityService,
+      { uploadFromBuffer } as unknown as AssetsService,
+      {} as StorageProvider,
       mockRelayMediaResolver as RelayMediaResolverService,
+    )
+  })
+
+  it('stores authenticated video content before completing the task', async () => {
+    mockAiLogRepo.getByTaskId.mockResolvedValue({
+      id: 'ai-log-1',
+      userId: 'user-1',
+      userType: UserType.User,
+      model: 'relay-video-model',
+      channel: AiLogChannel.Relay,
+      status: AiLogStatus.Generating,
+      startedAt: new Date(),
+    } as AiLog)
+    mockAiLogRepo.updateByIdAndStatus.mockResolvedValue(true)
+    const video = Buffer.from('video')
+    mockRelayLibService.downloadVideoContent.mockResolvedValue(video)
+    await expect(service.callback({ id: 'remote-id', status: 'completed' }))
+      .resolves.toMatchObject({ status: 'success', videoUrl: 'videos/result.mp4' })
+    expect(uploadFromBuffer).toHaveBeenCalledWith(
+      'user-1', video, { type: 'ai-video', mimeType: 'video/mp4' }, 'relay-video-model', UserType.User,
     )
   })
 

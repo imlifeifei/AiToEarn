@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 export const IMAGE_TEXT_ASPECT_RATIOS = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9'] as const
 
-export const ALL_ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'] as const
+export const ALL_ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '26:15'] as const
 
 /** 视频草稿生成类型：draft 完整草稿（含标题/描述/话题），video 仅生成视频 */
 export const DRAFT_TYPES = ['draft', 'video'] as const
@@ -22,7 +22,7 @@ export const CreateDraftGenerationV2DtoSchema = z.object({
   model: z.string().describe('视频生成模型名称，如 grok-imagine-video'),
   duration: z.number().int().min(1).max(15).optional().describe('视频时长（秒），1-15'),
   resolution: z.string().optional().describe('视频分辨率'),
-  aspectRatio: z.enum(ALL_ASPECT_RATIOS).optional().describe('视频比例：1:1/16:9/9:16/4:3/3:4/3:2/2:3'),
+  aspectRatio: z.enum(ALL_ASPECT_RATIOS).optional().describe('所选模型支持的视频宽高比'),
   videoUrls: z.array(z.url()).max(3).optional().describe('运动参考视频 URL 数组，最多3个'),
   audioUrls: z.array(z.url()).max(3).optional().describe('参考音频 URL 数组，最多3个'),
   draftType: z.enum(DRAFT_TYPES).default('draft').describe('草稿类型：draft 完整草稿，video 仅生成视频且不生成文案'),

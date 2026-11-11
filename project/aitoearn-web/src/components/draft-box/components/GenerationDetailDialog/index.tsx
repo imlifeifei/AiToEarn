@@ -341,6 +341,8 @@ const GenerationDetailContent = memo(({
     return () => observer.disconnect()
   }, [hasMore, loading, page, fetchTasks])
 
+  const visibleTasks = tasks.filter(task => task.status !== 'failed')
+
   return (
     <>
       <DialogHeader>
@@ -349,7 +351,7 @@ const GenerationDetailContent = memo(({
 
       <ScrollArea className="max-h-[60vh]">
         <div className="space-y-2 pr-2">
-          {tasks.map(task => (
+          {visibleTasks.map(task => (
             <TaskItem
               key={task.id}
               task={task}
@@ -370,7 +372,7 @@ const GenerationDetailContent = memo(({
           )}
 
           {/* 空状态 */}
-          {!loading && tasks.length === 0 && (
+          {!loading && !hasMore && visibleTasks.length === 0 && (
             <div className="flex justify-center py-8 text-sm text-muted-foreground">
               {t('detail.noGenerationTasks')}
             </div>

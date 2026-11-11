@@ -115,8 +115,8 @@ export class AgentRuntimeService {
   }
 
   private getTaskProjectDir(taskId: string): string {
-    const taskCwd = this.getTaskCwd(taskId)
-    return taskCwd.replace(/\//g, '-').replace(/\./g, '-')
+    // Claude Code replaces every non-alphanumeric character in the working directory.
+    return this.getTaskCwd(taskId).replace(/[^a-z0-9]/gi, '-')
   }
 
   private getMessageType(chunk: SDKMessage): AgentMessageType.Assistant | AgentMessageType.User | AgentMessageType.Result | AgentMessageType.System | AgentMessageType.StreamEvent | AgentMessageType.ToolProgress | AgentMessageType.AuthStatus {
@@ -951,19 +951,25 @@ export class AgentRuntimeService {
 
     try {
       this.logger.debug({ taskId, sessionId }, `Downloading session ${sessionId} for task ${taskId}`)
-      const s3Key = `claude-session/.claude/projects/${this.projectDir}/${task.sessionId}.jsonl`
-      const response = await this.storageProvider.getObject(s3Key)
-
-      const taskProjectDir = this.getTaskProjectDir(task.id)
+      const s3Key = `claude-session/.claude/projects/${this.projectDir}/${sessionId}.jsonl`
+      const taskProjectDir = this.getTaskProjectDir(taskId)
       const projectsDir = join(this.sessionDir, '.claude/projects', taskProjectDir)
+      const sessionFile = join(projectsDir, `${sessionId}.jsonl`)
+      const response = await this.storageProvider.getObject(s3Key).catch((error: unknown) => {
+        if (!fs.existsSync(sessionFile))
+          throw error
+        return undefined
+      })
 
-      if (response.buffer) {
-        fs.mkdirSync(projectsDir, { recursive: true })
-        fs.writeFileSync(join(projectsDir, `${task.sessionId}.jsonl`), response.buffer)
+      if (!response?.buffer?.length) {
+        if (!fs.existsSync(sessionFile))
+          throw new Error(`Session file not found in S3 or locally: ${s3Key}`)
+        this.logger.warn({ taskId, sessionId }, 'Restoring agent session from local file')
+        return
       }
-      else {
-        this.logger.fatal({ taskId, sessionId }, `Session file not found in S3: ${s3Key}`)
-      }
+
+      fs.mkdirSync(projectsDir, { recursive: true })
+      fs.writeFileSync(sessionFile, response.buffer)
 
       if (task.subAgentIds?.length) {
         const subagentsDir = join(projectsDir, task.sessionId, 'subagents')
