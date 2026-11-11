@@ -136,13 +136,7 @@ const PubParmasMentionInput = memo(
 
         if (!queryString)
           return []
-        try {
-          const res = await getDouyinTopicsApi(queryString!)
-          return res?.data ?? []
-        }
-        catch {
-          return []
-        }
+        return getDouyinTopicsApi(queryString)
       }, [hasInvalidTopicFormat])
 
       // @ts-ignore
