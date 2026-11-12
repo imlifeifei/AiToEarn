@@ -2,6 +2,7 @@ import type { AiAvailabilityService } from '../../ai-availability'
 import { Logger } from '@nestjs/common'
 import { ContentGenerationTaskRepository } from '@yikart/mongodb'
 import { vi } from 'vitest'
+import { inspectMcpServer } from '../../../../test/mcp-server.util'
 import { UtilMcp, UtilToolName } from './util.mcp'
 
 describe('utilMcp', () => {
@@ -148,13 +149,8 @@ describe('utilMcp', () => {
       expect(utilMcp.server.name).toBe('util')
     })
 
-    it('should include wait and getCurrentTime tools', () => {
-      const server = utilMcp.server as { tools?: Array<{ name: string }> }
-      const tools = server.tools
-      expect(tools).toBeDefined()
-      expect(tools?.length).toBeGreaterThanOrEqual(2)
-
-      const toolNames = tools?.map(t => t.name)
+    it('should include wait and getCurrentTime tools', async () => {
+      const { toolNames } = await inspectMcpServer(utilMcp.server)
       expect(toolNames).toContain(UtilToolName.Wait)
       expect(toolNames).toContain(UtilToolName.GetCurrentTime)
     })

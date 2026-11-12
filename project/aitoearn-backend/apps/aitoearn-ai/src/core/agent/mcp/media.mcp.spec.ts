@@ -1,8 +1,9 @@
 import type { AiAvailabilityService } from '../../ai-availability'
 import { Logger } from '@nestjs/common'
-import { UserType } from '@yikart/common'
+import { FileUtil, UserType } from '@yikart/common'
 import { AiLogStatus } from '@yikart/mongodb'
 import { vi } from 'vitest'
+import { inspectMcpServer } from '../../../../test/mcp-server.util'
 import { ImageService } from '../../ai/image'
 import { GrokVideoService, OpenAIVideoService, VideoService } from '../../ai/video'
 import { MediaMcp, MediaToolName } from './media.mcp'
@@ -19,6 +20,8 @@ describe('mediaMcp', () => {
   const userType = UserType.User
 
   beforeEach(() => {
+    FileUtil.init({ endpoint: 'https://cdn.example.com' })
+
     mockLogger = {
       debug: vi.fn(),
       error: vi.fn(),
@@ -485,9 +488,8 @@ describe('mediaMcp', () => {
       expect(server.name).toBe('mediaGeneration')
     })
 
-    it('should include expected tools', () => {
-      const server = mediaMcp.createServer(userId, userType) as { tools?: Array<{ name: string }> }
-      const toolNames = server.tools?.map(t => t.name)
+    it('should include expected tools', async () => {
+      const { toolNames } = await inspectMcpServer(mediaMcp.createServer(userId, userType))
 
       expect(toolNames).toContain(MediaToolName.GenerateImage)
       expect(toolNames).toContain(MediaToolName.GenerateVideoWithGrok)

@@ -1348,7 +1348,13 @@ export interface VisionApiResponse {
   /** 视频处理任务 ID */
   RunId: string
   /** AI 视频理解任务结果 */
-  Vision?: VisionResult
+  Vision?: Partial<VisionResult> & {
+    Output?: {
+      Task?: {
+        Vision?: VisionResult
+      }
+    }
+  }
   /** 错误信息 */
   Error?: {
     Code: string

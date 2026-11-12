@@ -2,8 +2,9 @@ import type { AiAvailabilityService } from '../../../ai-availability'
 import { Logger } from '@nestjs/common'
 import { UserType } from '@yikart/common'
 import { vi } from 'vitest'
+import { inspectMcpServer } from '../../../../../test/mcp-server.util'
 import { AideoService } from '../../../ai/aideo'
-import { AideoTaskStatus } from '../../../ai/libs/volcengine'
+import { AideoTaskStatus, SkillType } from '../../../ai/libs/volcengine'
 import { AideoMcp, AideoToolName } from './aideo.mcp'
 
 describe('aideoMcp', () => {
@@ -253,7 +254,12 @@ describe('aideoMcp', () => {
       expect(textContent.text).toContain('https://example.com/creative.mp4')
     })
 
-    it('should return Vision analysis results when completed', async () => {
+    const visionContent = 'This video shows a cat playing with a ball. Keywords: cat, play, ball.'
+
+    it.each([
+      ['the media processing result', { Output: { Task: { Vision: { Content: visionContent } } } }],
+      ['the flat result', { Content: visionContent }],
+    ])('should return Vision analysis from %s', async (_format, vision) => {
       mockAideoService.getAideoTask.mockResolvedValue({
         taskId: 'aideo-task-123',
         model: 'aideo',
@@ -262,9 +268,8 @@ describe('aideoMcp', () => {
         updatedAt: new Date(),
         apiResponses: [
           {
-            Vision: {
-              Content: 'This video shows a cat playing with a ball. Keywords: cat, play, ball.',
-            },
+            VodTaskType: SkillType.Vision,
+            Vision: vision,
           },
         ],
       } as never)
@@ -276,7 +281,25 @@ describe('aideoMcp', () => {
       const textContent = result.content[0] as { type: 'text', text: string }
       expect(textContent.text).toContain('completed successfully')
       expect(textContent.text).toContain('Vision Analysis Results')
-      expect(textContent.text).toContain('cat playing with a ball')
+      expect(textContent.text).toContain(visionContent)
+    })
+
+    it('should report missing Vision analysis for a completed task', async () => {
+      mockAideoService.getAideoTask.mockResolvedValue({
+        taskId: 'aideo-task-123',
+        model: 'aideo',
+        status: AideoTaskStatus.Completed,
+        skillType: SkillType.Vision,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        apiResponses: [{ VodTaskType: SkillType.Vision, Vision: {} }],
+      } as never)
+
+      const tool = aideoMcp.createGetAideoTaskStatusTool(userId, userType)
+      const result = await tool.handler({ taskId: 'aideo-task-123' }, {})
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0]).toMatchObject({ text: expect.stringContaining('no video analysis text') })
     })
 
     it('should return processing status when task is still running', async () => {
@@ -323,17 +346,12 @@ describe('aideoMcp', () => {
       expect(server.name).toBe('aideo')
     })
 
-    it('should include expected tools', () => {
-      const server = aideoMcp.createServer(userId, userType) as { tools?: Array<{ name: string }> }
-      const toolNames = server.tools?.map(t => t.name)
+    it('should include expected tools and report its version', async () => {
+      const { toolNames, version } = await inspectMcpServer(aideoMcp.createServer(userId, userType))
 
       expect(toolNames).toContain(AideoToolName.SubmitAideoTask)
       expect(toolNames).toContain(AideoToolName.GetAideoTaskStatus)
-    })
-
-    it('should have version 1.0.0', () => {
-      const server = aideoMcp.createServer(userId, userType) as { version?: string }
-      expect(server.version).toBe('1.0.0')
+      expect(version).toBe('1.0.0')
     })
   })
 })

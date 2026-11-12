@@ -1,10 +1,11 @@
+import type { VisionApiResponse } from '../../../ai/libs/volcengine'
 import { createSdkMcpServer, McpSdkServerConfigWithInstance } from '@anthropic-ai/claude-agent-sdk'
 import { Injectable, Logger } from '@nestjs/common'
 import { UserType } from '@yikart/common'
 import { z } from 'zod'
 import { AiAvailabilityService } from '../../../ai-availability'
 import { AideoService } from '../../../ai/aideo'
-import { AideoTaskStatus } from '../../../ai/libs/volcengine'
+import { AideoTaskStatus, SkillType } from '../../../ai/libs/volcengine'
 import { McpServerName } from '../../agent.constants'
 import { errorResult, successResult, wrapTool } from '../mcp.utils'
 
@@ -87,6 +88,22 @@ Note: For video style transfer (comic/anime), use submitVideoStyleTransfer inste
 
         if (result.status === AideoTaskStatus.Completed) {
           let outputInfo = `Task completed successfully!\n\nStatus: ${result.status}\n`
+          const visionResponses = result.apiResponses?.filter(response =>
+            response['VodTaskType'] === SkillType.Vision || response['Vision'],
+          ) ?? []
+
+          if (result.skillType === SkillType.Vision || visionResponses.length > 0) {
+            const analysis = visionResponses.map((response) => {
+              const vision = response['Vision'] as VisionApiResponse['Vision']
+              return [vision?.Output?.Task?.Vision?.Content, vision?.Content]
+                .find(content => typeof content === 'string' && content.trim())
+                ?.trim()
+            }).filter(Boolean).join('\n\n')
+
+            return analysis
+              ? successResult(`${outputInfo}\nVision Analysis Results:\n${analysis}`)
+              : errorResult('Aideo task completed, but no video analysis text was returned.')
+          }
 
           if (result.apiResponses && result.apiResponses.length > 0) {
             const apiResponse = result.apiResponses[0]
@@ -94,7 +111,6 @@ Note: For video style transfer (comic/anime), use submitVideoStyleTransfer inste
             const erase = apiResponse['Erase']
             const highlight = apiResponse['Highlight']
             const vCreative = apiResponse['VCreative']
-            const vision = apiResponse['Vision']
 
             if (aiTranslation?.ProjectInfo?.OutputVideo?.Url) {
               outputInfo += `\nOutput Video URL: ${aiTranslation.ProjectInfo.OutputVideo.Url}`
@@ -121,9 +137,6 @@ Note: For video style transfer (comic/anime), use submitVideoStyleTransfer inste
                   outputInfo += `\nOutput Video URL: ${url}`
                 }
               }
-            }
-            else if (vision) {
-              outputInfo += `\n\nVision Analysis Results:\n${vision.Content}`
             }
           }
 
